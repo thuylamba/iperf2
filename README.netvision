@@ -1,0 +1,72 @@
+1. Download source code
+# git clone https://github.com/thuylamba/iperf2.git
+2. Compile
+# autoreconf --install
+# ./configure --prefix=$PWD/__install
+# make clean; make; make install
+3. Exec Command line 
+3.1 Server
+# ./__install/bin/iperf -s
+3.2 Client
+# ./__install/bin/iperf -c 192.168.16.3 -b10M -w2m -i2 -t100
+    -b<rate> is startup rate
+    -t<num> is seconds
+3.3 Change bandwidth
+# vi tools/bandwidth.py
+    message = "{\"bandwidth\":1000000}"
+# python3 tools/bandwidth.py
+4. Test Results
+# ./__install/bin/iperf -s
+------------------------------------------------------------
+Server listening on TCP port 5001
+TCP window size:  128 KByte (default)
+------------------------------------------------------------
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 33502
+[ ID] Interval       Transfer     Bandwidth
+[  4]  0.0-10.0 sec  12.6 MBytes  10.6 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 55056
+[  4]  0.0-10.0 sec  12.6 MBytes  10.6 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 53286
+[  4]  0.0- 1.8 sec  2.25 MBytes  10.5 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 38600
+[  4]  0.0-100.0 sec   125 MBytes  10.5 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 54186
+[  4]  0.0-58.9 sec  73.8 MBytes  10.5 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 48514
+[  4]  0.0- 1.8 sec  2.38 MBytes  10.8 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 33300
+[  4]  0.0- 2.0 sec  2.62 MBytes  10.9 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 51664
+[  4]  0.0-16.5 sec  20.6 MBytes  10.5 Mbits/sec
+[  4] local 192.168.16.3 port 5001 connected with 192.168.16.6 port 58184
+[  4]  0.0-47.2 sec  3.50 MBytes   622 Kbits/sec
+
+# ./__install/bin/iperf -c 192.168.16.3 -b10M -w2m -i2 -t100
+------------------------------------------------------------
+Client connecting to 192.168.16.3, TCP port 5001
+TCP window size:  416 KByte (WARNING: requested 1.91 MByte)
+------------------------------------------------------------
+[  3] local 192.168.16.6 port 41144 connected with 192.168.16.3 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0- 2.0 sec  2.62 MBytes  11.0 Mbits/sec
+[  3]  2.0- 4.0 sec  2.50 MBytes  10.5 Mbits/sec
+[  3]  4.0- 6.0 sec  2.50 MBytes  10.5 Mbits/sec
+Update bandwidth [2000000]
+[  3] 26.0-28.0 sec   128 KBytes   524 Kbits/sec
+[  3] 28.0-30.0 sec   384 KBytes  1.57 Mbits/sec
+[  3] 30.0-32.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 32.0-34.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 34.0-36.0 sec   384 KBytes  1.57 Mbits/sec
+[  3] 36.0-38.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 38.0-40.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 40.0-42.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 42.0-44.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 44.0-46.0 sec   384 KBytes  1.57 Mbits/sec
+Update bandwidth [1000000]
+[  3] 46.0-48.0 sec   512 KBytes  2.10 Mbits/sec
+[  3] 48.0-50.0 sec   256 KBytes  1.05 Mbits/sec
+[  3] 50.0-52.0 sec   256 KBytes  1.05 Mbits/sec
+[  3] 52.0-54.0 sec   256 KBytes  1.05 Mbits/sec
+[  3] 54.0-56.0 sec   128 KBytes   524 Kbits/sec
+[  3] 56.0-58.0 sec   256 KBytes  1.05 Mbits/sec
+

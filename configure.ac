@@ -97,7 +97,8 @@ if test "$enable_threads" != no; then
       AC_DEFINE([_REENTRANT], 1,)
     fi
 fi
-
+dnl libjson-c 
+AC_SEARCH_LIBS([json_object_get], [json-c], [], [AC_MSG_ERROR([libjson-c not found])])
 dnl check for -lnsl, -lsocket
 AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket], [],

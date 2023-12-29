@@ -52,6 +52,7 @@
  * ------------------------------------------------------------------- */
 
 #include <time.h>
+#include <json-c/json.h>
 #include "headers.h"
 #include "Client.hpp"
 #include "Thread.h"
@@ -71,7 +72,91 @@ const int    kBytes_to_Bits = 8;
 
 #define VARYLOAD_PERIOD 0.1 // recompute the variable load every n seconds
 #define MAXUDPBUF 1470
+//thanh@ patch ctrl interface
+#define CTRL_PORT_INDEX 2911
+#ifndef FALSE
+#define FALSE 0
+#endif  // FALSE
+#ifndef TRUE
+#define TRUE 1
+#endif  // TRUE
+static int _jsonfd = -1; // define static socket ctrl
+static max_size_t _update_bandwidth = 0;
+static int32_t _update_enable = FALSE;
+static int 
+initCtrl(void) {
+    int sfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sfd == -1) {
+        perror("Socket creation failed");
+        return -1;
+    }
+    return sfd;
+}
+static void 
+bindCtrl(void) {
+    int sfd = initCtrl();    // create socket;
+    struct sockaddr_in server_address;
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port = htons(CTRL_PORT_INDEX);
 
+    if (bind(sfd, (struct sockaddr*)&server_address, sizeof(server_address)) == -1) {
+        perror("Bind failed");
+        close(sfd);
+        return;
+    }
+    _jsonfd = sfd;
+}
+static int
+waitCtrl(int sfd) {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(sfd, &readfds);
+    struct timeval timeout = {0, 10};
+    if(select(sfd + 1, &readfds, NULL, NULL, &timeout) > 0) {
+        if (FD_ISSET(sfd, &readfds)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+static void
+readCtrl(void) {
+    if(waitCtrl(_jsonfd) > 0) 
+    {
+        char buffer[1024] = {0, };
+        struct sockaddr_in client_address;
+        socklen_t client_addrlen = sizeof(client_address);
+        ssize_t bytes_received = recvfrom(_jsonfd, buffer, sizeof(buffer), 0,
+                (struct sockaddr*)&client_address, &client_addrlen);
+        if(bytes_received > 0) 
+        {
+            buffer[bytes_received] = '\0';
+            json_object *json_obj = json_tokener_parse(buffer);
+            if (json_obj == NULL) {
+                printf("Received from %s:%d: %s", inet_ntoa(client_address.sin_addr),
+                    ntohs(client_address.sin_port), buffer);
+            } else {
+                 json_object *bandwidth;
+                 if (json_object_object_get_ex(json_obj, "bandwidth", &bandwidth)) {
+                     _update_bandwidth = json_object_get_int(bandwidth);
+                     _update_enable = TRUE;
+                 }
+                 // Clean up
+                 json_object_put(json_obj);
+            }
+        }
+    }
+}
+static void
+freeCtrl(void) {
+    if(_jsonfd > 0)
+    {
+        close(_jsonfd);
+    }
+}
+
+//
 Client::Client( thread_Settings *inSettings ) {
     mSettings = inSettings;
     mBuf = NULL;
@@ -319,6 +404,9 @@ void Client::Run( void ) {
     /*
      * UDP specific setup
      */
+    // Thanh@
+    bindCtrl(); // bind ctrl interface
+    //
     if (isUDP(mSettings)) {
 	// Preset any UDP fields in the mBuf, a non-zero
 	// return indicates some udptests were set
@@ -355,6 +443,7 @@ void Client::Run( void ) {
 	else
 	    RunTCP();
     }
+    freeCtrl();
 }
 
 /*
@@ -427,10 +516,18 @@ void Client::RunRateLimitedTCP ( void ) {
     int var_rate = mSettings->mUDPRate;
     int fatalwrite_err = 0;
     while (InProgress() && !fatalwrite_err) {
-	// Add tokens per the loop time
-	// clock_gettime is much cheaper than gettimeofday() so
-	// use it if possible.
-	time2.setnow();
+        readCtrl(); // thanh@
+        if(_update_enable == TRUE) 
+        {
+            fprintf(stderr, "Update bandwidth [%lld] \n", _update_bandwidth);
+            mSettings->mUDPRate = _update_bandwidth;
+            var_rate = _update_bandwidth;
+            _update_enable = FALSE;
+        }
+        // Add tokens per the loop time
+        // clock_gettime is much cheaper than gettimeofday() so
+        // use it if possible.
+        time2.setnow();
         if (isVaryLoad(mSettings)) {
 	    static Timestamp time3;
 	    if (time2.subSec(time3) >= VARYLOAD_PERIOD) {
